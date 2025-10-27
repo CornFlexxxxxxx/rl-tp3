@@ -17,6 +17,7 @@ class SarsaAgent:
         learning_rate: float,
         gamma: float,
         legal_actions: t.List[Action],
+        epsilon: float = 0.1,
     ):
         """
         SARSA  Agent
@@ -27,6 +28,7 @@ class SarsaAgent:
         self._qvalues: QValues = defaultdict(lambda: defaultdict(int))
         self.learning_rate = learning_rate
         self.gamma = gamma
+        self.epsilon = epsilon
 
     def get_qvalue(self, state: State, action: Action) -> float:
         """
@@ -47,6 +49,12 @@ class SarsaAgent:
         """
         value = 0.0
         # BEGIN SOLUTION
+        if not self.legal_actions:
+            return 0.0
+        possible_q_values = [
+            self.get_qvalue(state, action) for action in self.legal_actions
+        ]
+        value = max(possible_q_values)
         # END SOLUTION
         return value
 
@@ -61,8 +69,28 @@ class SarsaAgent:
         """
         q_value = 0.0
         # BEGIN SOLUTION
+        q_old = self.get_qvalue(state, action)
+        next_action = self.get_action(next_state)
+        q_next = self.get_qvalue(next_state, next_action)
+        td_target = reward + self.gamma * q_next
+        td_error = td_target - q_old
+        q_value = q_old + self.learning_rate * td_error
         # END SOLUTION
 
+        self.set_qvalue(state, action, q_value)
+
+    def update_sarsa(
+        self, state: State, action: Action, reward: t.SupportsFloat, 
+        next_state: State, next_action: Action
+    ):
+        """
+        Proper SARSA update with the actual next action taken.
+        """
+        q_old = self.get_qvalue(state, action)
+        q_next = self.get_qvalue(next_state, next_action)
+        td_target = reward + self.gamma * q_next
+        td_error = td_target - q_old
+        q_value = q_old + self.learning_rate * td_error
         self.set_qvalue(state, action, q_value)
 
     def get_best_action(self, state: State) -> Action:
@@ -83,6 +111,10 @@ class SarsaAgent:
         action = self.legal_actions[0]
 
         # BEGIN SOLUTION
+        if random.random() < self.epsilon:
+            action = random.choice(self.legal_actions)
+        else:
+            action = self.get_best_action(state)
         # END SOLUTION
 
         return action
